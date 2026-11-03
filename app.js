@@ -17,6 +17,18 @@ let api, info, progress, lesson;
 // ---------- прогресс: облако Telegram, а вне Telegram память браузера ----------
 
 const cloud = tg?.CloudStorage && tg.isVersionAtLeast?.("6.9") ? tg.CloudStorage : null;
+// Скрипт Telegram грузится и в обычном браузере, но там его окна и кнопки бросают ошибку
+const popups = tg?.isVersionAtLeast?.("6.2") ?? false;
+const backButton = tg?.isVersionAtLeast?.("6.1") ? tg.BackButton : null;
+
+function alertBox(text) {
+  popups ? tg.showAlert(text) : alert(text);
+}
+
+function confirmBox(text, onYes) {
+  if (popups) tg.showConfirm(text, (yes) => yes && onYes());
+  else if (confirm(text)) onYes();
+}
 
 function emptyProgress() {
   return { xp: 0, streak: 0, best: 0, last: null, lessons: 0, answered: 0, correct: 0, mistakes: [], mode: null, level: null };
@@ -85,7 +97,7 @@ function show(screen) {
   for (const id of ["loading", "home", "lesson", "result"]) $(id).hidden = id !== screen;
   $("sheet").hidden = true;
   window.scrollTo(0, 0);
-  if (tg?.BackButton) screen === "lesson" ? tg.BackButton.show() : tg.BackButton.hide();
+  if (backButton) screen === "lesson" ? backButton.show() : backButton.hide();
 }
 
 function haptic(kind) {
@@ -124,7 +136,7 @@ function startLesson(kind) {
   const questions = JSON.parse(raw);
   if (!questions.length) {
     const text = "В этом режиме пока нечего повторять.";
-    tg?.showAlert ? tg.showAlert(text) : alert(text);
+    alertBox(text);
     return;
   }
   lesson = { kind, questions, idx: 0, total: 0, correct: 0, wrong: new Set(), repeated: new Set(), picked: null, answered: false };
@@ -260,8 +272,7 @@ function finish() {
 function quitLesson() {
   const leave = () => { buildHome(); show("home"); };
   const text = "Закончить урок? Прогресс этого урока не сохранится, а ошибки останутся на повторении.";
-  if (tg?.showConfirm) tg.showConfirm(text, (yes) => yes && leave());
-  else if (confirm(text)) leave();
+  confirmBox(text, leave);
 }
 
 // ---------- кнопки ----------
@@ -271,7 +282,7 @@ $("review").onclick = () => startLesson("review");
 $("again").onclick = () => startLesson(lesson?.kind === "review" && progress.mistakes.length ? "review" : "lesson");
 $("home-btn").onclick = () => { buildHome(); show("home"); };
 $("quit").onclick = quitLesson;
-tg?.BackButton?.onClick(quitLesson);
+backButton?.onClick(quitLesson);
 $("dunno").onclick = () => answer(null);
 $("check").onclick = () => {
   const q = lesson.questions[lesson.idx];
