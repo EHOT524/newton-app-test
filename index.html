@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Формулы с Ньютоном</title>
+<link rel="stylesheet" href="style.css?v=1">
+<script src="https://telegram.org/js/telegram-web-app.js" async></script>
+</head>
+<body>
+<main id="app">
+  <section id="loading" class="screen center">
+    <div class="logo">🍎</div>
+    <h1>Формулы с Ньютоном</h1>
+    <p id="loading-text" class="muted">Загружаем задания…</p>
+    <div class="spinner"></div>
+  </section>
+
+  <section id="home" class="screen" hidden>
+    <header class="home-head">
+      <div>
+        <div class="muted small">🍎 Физика · пробная версия</div>
+        <h1>🧮 Формулы</h1>
+      </div>
+      <div class="stats">
+        <span class="stat" title="Опыт">⭐ <b id="xp">0</b></span>
+        <span class="stat" title="Стрик">🔥 <b id="streak">0</b></span>
+      </div>
+    </header>
+
+    <h2>К чему готовимся?</h2>
+    <div id="modes" class="chips"></div>
+
+    <h2>Сложность</h2>
+    <div id="levels" class="levels"></div>
+
+    <div class="home-actions">
+      <button id="start" class="btn primary big">▶️ Начать урок</button>
+      <button id="review" class="btn secondary">🔁 Работа над ошибками <span id="review-count"></span></button>
+    </div>
+    <p class="muted small note">Прогресс хранится в Telegram и пока не связан с ботом: опыт и стрик здесь свои.</p>
+  </section>
+
+  <section id="lesson" class="screen" hidden>
+    <div class="lesson-top">
+      <button id="quit" class="icon-btn" aria-label="Закончить урок">✕</button>
+      <div class="bar"><div id="bar-fill"></div></div>
+      <span id="counter" class="muted small"></span>
+    </div>
+    <div id="repeat-note" class="repeat" hidden>🔁 Повторим этот вопрос</div>
+    <div id="question" class="question"></div>
+    <div id="options" class="options"></div>
+    <div id="typed" class="typed" hidden>
+      <input id="answer" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Твой ответ">
+    </div>
+    <div class="lesson-actions">
+      <button id="dunno" class="btn ghost">🤷 Не знаю</button>
+      <button id="check" class="btn primary" disabled>Проверить</button>
+    </div>
+  </section>
+
+  <section id="result" class="screen center" hidden>
+    <div id="result-emoji" class="logo"></div>
+    <h1 id="result-title"></h1>
+    <div class="result-cards">
+      <div class="card"><div class="muted small">Правильно</div><b id="res-correct"></b></div>
+      <div class="card"><div class="muted small">Опыт</div><b id="res-xp"></b></div>
+      <div class="card"><div class="muted small">Стрик</div><b id="res-streak"></b></div>
+    </div>
+    <p id="res-mistakes" class="muted"></p>
+    <div class="home-actions">
+      <button id="again" class="btn primary big">▶️ Ещё урок</button>
+      <button id="home-btn" class="btn secondary">На главную</button>
+    </div>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden>
+  <div id="sheet-title" class="sheet-title"></div>
+  <div id="sheet-body" class="sheet-body"></div>
+  <button id="next" class="btn big">Дальше</button>
+</div>
+
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>
