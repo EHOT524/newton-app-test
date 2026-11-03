@@ -12,7 +12,7 @@ const LEVEL_HINTS = { easy: "4 варианта", medium: "8 вариантов"
 // Свои цвета разделов: яблочный красный, ягодный, фиолетовый, синий, бирюзовый, оливковый, медный
 const UNIT_COLORS = [["#d9412b", "#a8301f"], ["#c2255c", "#96194a"], ["#6741d9", "#5032b0"], ["#1971c2", "#135996"],
                      ["#0c8599", "#096978"], ["#5c940d", "#46710a"], ["#b35c1e", "#8a4616"]];
-const ZIGZAG = [0, 55, 85, 55, 0, -55, -85, -55]; // сдвиг островков вправо и влево
+const ZIGZAG = [0, 40, 60, 40, 0, -40, -60, -40]; // волна: островки то ниже, то выше
 
 const $ = (id) => document.getElementById(id);
 const tg = window.Telegram?.WebApp;
@@ -139,8 +139,11 @@ function openMap() {
   path = JSON.parse(api.path(progress.mode));
   renderMap();
   show("map");
-  const target = document.querySelector(".island.current") || [...document.querySelectorAll(".island:not(.done)")][0];
-  target?.scrollIntoView({ block: "center" });
+  const target = document.querySelector(".island.current") || document.querySelector(".island:not(.done)");
+  if (target) {
+    const box = $("path");
+    box.scrollLeft = target.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft - box.clientWidth * 0.4 + 44; // чуть левее центра: виден следующий шаг
+  }
 }
 
 function renderMap() {
@@ -151,28 +154,30 @@ function renderMap() {
   $("review-count").textContent = progress.mistakes.length;
   $("review").disabled = !progress.mistakes.length;
 
-  const parts = [];
+  // Карта листается вправо: каждый раздел это плашка и под ней ряд островков
+  const groups = [];
   if (path.classes) {
     path.units.forEach((title, unit) => {
       const own = path.steps.map((s, i) => [s, i]).filter(([s]) => s.unit === unit);
       const done = doneCount();
       const unlocked = own[0][1] <= done;
       const finished = own.at(-1)[1] < done;
-      parts.push(unitBanner(unit, `Раздел ${unit + 1}`, title, unlocked && !finished, !unlocked));
-      parts.push(islands(own, unit));
+      groups.push(unitGroup(unitBanner(unit, `Раздел ${unit + 1}`, title, unlocked && !finished, !unlocked), islands(own, unit)));
     });
   } else {
     const title = progress.mode === "oge" ? "Номера ОГЭ" : "Номера ЕГЭ";
-    parts.push(unitBanner(0, "Все номера открыты", title, false, false));
-    if (path.note) {
-      const note = document.createElement("p");
-      note.className = "exam-note";
-      note.textContent = path.note;
-      parts.push(note);
-    }
-    parts.push(islands(path.steps.map((s, i) => [s, i]), 0));
+    groups.push(unitGroup(unitBanner(0, "Все номера открыты", title, false, false), islands(path.steps.map((s, i) => [s, i]), 0)));
   }
-  $("path").replaceChildren(...parts);
+  $("path").replaceChildren(...groups);
+  $("exam-note").textContent = path.note;
+  $("exam-note").hidden = !path.note;
+}
+
+function unitGroup(banner, row) {
+  const el = document.createElement("div");
+  el.className = "unit-group";
+  el.append(banner, row);
+  return el;
 }
 
 function unitBanner(unit, label, title, canSkip, locked) {
@@ -181,14 +186,18 @@ function unitBanner(unit, label, title, canSkip, locked) {
   el.className = "unit" + (locked ? " locked" : "");
   el.style.setProperty("--c", c);
   el.style.setProperty("--cd", cd);
-  el.innerHTML = `<div><div class="unit-label">${escapeHtml(label)}</div><div class="unit-title">${escapeHtml(title)}</div></div>`;
+  // Текст плашки прилипает к левому краю, пока листаешь её раздел
+  const text = document.createElement("div");
+  text.className = "unit-text";
+  text.innerHTML = `<div class="unit-label">${escapeHtml(label)}</div><div class="unit-title">${escapeHtml(title)}</div>`;
   if (canSkip) {
     const skip = document.createElement("button");
     skip.className = "unit-skip";
     skip.textContent = "⏭ Знаю раздел";
     skip.onclick = () => openPopover({ skip: unit });
-    el.append(skip);
+    text.append(skip);
   }
+  el.append(text);
   return el;
 }
 
@@ -199,8 +208,8 @@ function islands(items, unit) {
   items.forEach(([step, i], k) => {
     const state = stepState(i);
     const wrap = document.createElement("div");
-    wrap.className = "island-wrap" + (state === "current" ? " has-tag" : "");
-    wrap.style.transform = `translateX(${ZIGZAG[k % ZIGZAG.length]}px)`;
+    wrap.className = "island-wrap";
+    wrap.style.transform = `translateY(${ZIGZAG[k % ZIGZAG.length]}px)`;
     const b = document.createElement("button");
     b.className = `island ${state}` + (step.control ? " control" : "");
     b.style.setProperty("--c", c);
@@ -476,6 +485,12 @@ $("open-settings").onclick = () => { renderSettings(); $("settings").hidden = fa
 $("close-settings").onclick = () => { $("settings").hidden = true; openMap(); };
 $("settings").onclick = (e) => { if (e.target === $("settings")) $("close-settings").click(); };
 $("popover").onclick = (e) => { if (e.target === $("popover")) $("popover").hidden = true; };
+// На компьютере колесо мыши листает карту вбок
+$("path").addEventListener("wheel", (e) => {
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  $("path").scrollLeft += e.deltaY;
+  e.preventDefault();
+}, { passive: false });
 $("review").onclick = () => startLesson({ kind: "review" });
 $("practice").onclick = () => startLesson({ kind: "practice" });
 $("card-close").onclick = openMap;
