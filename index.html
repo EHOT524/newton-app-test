@@ -4,42 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Формулы с Ньютоном</title>
-<link rel="stylesheet" href="style.css?v=1">
+<title>Физика с Ньютоном</title>
+<link rel="stylesheet" href="style.css?v=2">
 <script src="https://telegram.org/js/telegram-web-app.js" async></script>
 </head>
 <body>
 <main id="app">
   <section id="loading" class="screen center">
     <div class="logo">🍎</div>
-    <h1>Формулы с Ньютоном</h1>
+    <h1>Физика с Ньютоном</h1>
     <p id="loading-text" class="muted">Загружаем задания…</p>
     <div class="spinner"></div>
   </section>
 
-  <section id="home" class="screen" hidden>
-    <header class="home-head">
-      <div>
-        <div class="muted small">🍎 Физика · пробная версия</div>
-        <h1>🧮 Формулы</h1>
-      </div>
+  <section id="map" class="screen" hidden>
+    <header class="topbar">
+      <button id="open-settings" class="pill">🎓 <b id="mode-title"></b> <span id="level-title"></span> ▾</button>
       <div class="stats">
         <span class="stat" title="Опыт">⭐ <b id="xp">0</b></span>
         <span class="stat" title="Стрик">🔥 <b id="streak">0</b></span>
       </div>
     </header>
-
-    <h2>К чему готовимся?</h2>
-    <div id="modes" class="chips"></div>
-
-    <h2>Сложность</h2>
-    <div id="levels" class="levels"></div>
-
-    <div class="home-actions">
-      <button id="start" class="btn primary big">▶️ Начать урок</button>
-      <button id="review" class="btn secondary">🔁 Работа над ошибками <span id="review-count"></span></button>
+    <div class="quick">
+      <button id="review" class="pill">🔁 Ошибки <b id="review-count">0</b></button>
+      <button id="practice" class="pill">🧮 Тренировка формул</button>
     </div>
-    <p class="muted small note">Прогресс хранится в Telegram и пока не связан с ботом: опыт и стрик здесь свои.</p>
+    <div id="path" class="path"></div>
+    <p class="muted small note">Пробная версия. Прогресс хранится в Telegram и пока не связан с ботом.</p>
+  </section>
+
+  <section id="card" class="screen" hidden>
+    <div class="lesson-top">
+      <button id="card-close" class="icon-btn" aria-label="К карте">✕</button>
+      <span class="muted small">Новое в этом шаге</span>
+    </div>
+    <h1 id="card-title"></h1>
+    <div id="card-list" class="card-list"></div>
+    <div class="sticky-action"><button id="card-start" class="btn primary big">Начать урок ▶️</button></div>
   </section>
 
   <section id="lesson" class="screen" hidden>
@@ -68,10 +69,11 @@
       <div class="card"><div class="muted small">Опыт</div><b id="res-xp"></b></div>
       <div class="card"><div class="muted small">Стрик</div><b id="res-streak"></b></div>
     </div>
+    <p id="res-path" class="res-path" hidden></p>
     <p id="res-mistakes" class="muted"></p>
-    <div class="home-actions">
-      <button id="again" class="btn primary big">▶️ Ещё урок</button>
-      <button id="home-btn" class="btn secondary">На главную</button>
+    <div class="actions">
+      <button id="res-main" class="btn primary big"></button>
+      <button id="res-map" class="btn secondary">🗺 К карте</button>
     </div>
   </section>
 </main>
@@ -82,6 +84,24 @@
   <button id="next" class="btn big">Дальше</button>
 </div>
 
-<script type="module" src="app.js?v=2"></script>
+<div id="popover" class="popover" hidden>
+  <div class="popover-box">
+    <div id="pop-title" class="pop-title"></div>
+    <div id="pop-text" class="muted small"></div>
+    <button id="pop-go" class="btn big"></button>
+  </div>
+</div>
+
+<div id="settings" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><h2>Настройки</h2><button id="close-settings" class="icon-btn" aria-label="Закрыть">✕</button></div>
+    <h3>К чему готовимся?</h3>
+    <div id="modes" class="chips"></div>
+    <h3>Сложность</h3>
+    <div id="levels" class="levels"></div>
+  </div>
+</div>
+
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>
