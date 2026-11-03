@@ -9,8 +9,9 @@ const LESSON_SIZE = 10;
 const MAX_MISTAKES = 200; // в облаке Telegram на одно значение 4096 символов
 const PRAISE = ["Отлично! 💪", "Верно! 🎉", "Так держать! ✨", "Правильно! 🚀", "Супер! 🔥"];
 const LEVEL_HINTS = { easy: "4 варианта", medium: "8 вариантов", hard: "пишешь сам" };
-const UNIT_COLORS = [["#58cc02", "#46a302"], ["#1cb0f6", "#1899d6"], ["#ce82ff", "#a568cc"], ["#ff9600", "#cc7800"],
-                     ["#ff4b4b", "#d93a3a"], ["#2b70c9", "#1f5aa3"], ["#00cd9c", "#00a47d"]];
+// Свои цвета разделов: яблочный красный, ягодный, фиолетовый, синий, бирюзовый, оливковый, медный
+const UNIT_COLORS = [["#d9412b", "#a8301f"], ["#c2255c", "#96194a"], ["#6741d9", "#5032b0"], ["#1971c2", "#135996"],
+                     ["#0c8599", "#096978"], ["#5c940d", "#46710a"], ["#b35c1e", "#8a4616"]];
 const ZIGZAG = [0, 55, 85, 55, 0, -55, -85, -55]; // сдвиг островков вправо и влево
 
 const $ = (id) => document.getElementById(id);
@@ -198,7 +199,7 @@ function islands(items, unit) {
   items.forEach(([step, i], k) => {
     const state = stepState(i);
     const wrap = document.createElement("div");
-    wrap.className = "island-wrap";
+    wrap.className = "island-wrap" + (state === "current" ? " has-tag" : "");
     wrap.style.transform = `translateX(${ZIGZAG[k % ZIGZAG.length]}px)`;
     const b = document.createElement("button");
     b.className = `island ${state}` + (step.control ? " control" : "");
