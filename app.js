@@ -1,5 +1,7 @@
 // Пробное приложение: путь по физике островками, как в Duolingo. Вопросы и проверку ответов делает код бота в браузере.
 
+import { CROW_LINES, crowSVG, raccoonSVG } from "./mascots.js?v=1";
+
 const PYODIDE = "https://ehot524.github.io/pyodide/"; // Python для браузера уже лежит на сайте с опытами
 const BUNDLE = "bot.zip?v=2";
 const STORE_KEY = "progress";
@@ -129,6 +131,7 @@ function show(screen) {
   for (const id of ["loading", "map", "card", "lesson", "result"]) $(id).hidden = id !== screen;
   $("sheet").hidden = true;
   $("popover").hidden = true;
+  if (screen !== "map") $("crow").hidden = true;
   window.scrollTo(0, 0);
   if (backButton) ["card", "lesson"].includes(screen) ? backButton.show() : backButton.hide();
 }
@@ -139,11 +142,99 @@ function openMap() {
   path = JSON.parse(api.path(progress.mode));
   renderMap();
   show("map");
-  const target = document.querySelector(".island.current") || document.querySelector(".island:not(.done)");
+  const target = raccoonIsland();
   if (target) {
     const box = $("path");
     box.scrollLeft = target.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft - box.clientWidth * 0.4 + 44; // чуть левее центра: виден следующий шаг
   }
+  placeRaccoon();
+  if (!crowShown) {
+    crowShown = true;
+    showCrow();
+  }
+}
+
+// ---------- маскоты: енот на карте и ворона ----------
+
+const RACCOON_W = 78;
+const RACCOON_H = 84;
+let crowShown = false; // ворона говорит один раз за запуск, а не при каждом возврате на карту
+
+function daysAway() {
+  if (!progress.last) return null;
+  return Math.round((Date.parse(moscowDay()) - Date.parse(progress.last)) / 86400e3);
+}
+
+function raccoonIsland() {
+  return document.querySelector(".island.current") || document.querySelector(".island:not(.done):not(.locked)")
+    || [...document.querySelectorAll(".island")].at(-1);
+}
+
+function islandSpot(island) {
+  // Енот стоит на верхушке островка: координаты внутри карты, с учётом прокрутки
+  const box = $("path");
+  const r = island.getBoundingClientRect();
+  const b = box.getBoundingClientRect();
+  return { left: r.left - b.left + box.scrollLeft + r.width / 2 - RACCOON_W / 2, top: r.top - b.top - RACCOON_H + 16 };
+}
+
+function setMood(el, mood) {
+  el.className = `raccoon ${mood}`;
+  el.innerHTML = raccoonSVG(mood);
+}
+
+function placeRaccoon() {
+  const target = raccoonIsland();
+  if (!target) return;
+  const el = document.createElement("div");
+  const goTo = (spot) => { el.style.left = `${spot.left}px`; el.style.top = `${spot.top}px`; };
+  const from = progress.walkFrom != null ? document.querySelector(`.island[data-step="${progress.walkFrom}"]`) : null;
+  if (progress.walkFrom != null) {
+    progress.walkFrom = null;
+    saveProgress();
+  }
+  if (from && from !== target) {
+    // Шаг пройден: енот идёт с прошлого островка на новый и радуется
+    setMood(el, "idle");
+    goTo(islandSpot(from));
+    $("path").append(el);
+    el.getBoundingClientRect();
+    el.classList.add("walking");
+    goTo(islandSpot(target));
+    let arrived = false;
+    const arrive = () => {
+      if (arrived || !el.isConnected) return;
+      arrived = true;
+      setMood(el, "happy");
+      setTimeout(() => el.isConnected && setMood(el, "idle"), 1800);
+    };
+    el.addEventListener("transitionend", arrive, { once: true });
+    setTimeout(arrive, 1600); // если приложение свернули, анимация стоит и transitionend не придёт
+    return;
+  }
+  const away = daysAway();
+  setMood(el, away !== null && away >= 2 ? "sleep" : "idle");
+  goTo(islandSpot(target));
+  $("path").append(el);
+}
+
+function crowLine() {
+  const away = daysAway();
+  const kind = away === null ? "welcome" : away === 0 ? "today" : away === 1 && progress.streak > 0 ? "streak"
+    : away <= 3 ? "days" : away <= 7 ? "week" : "long";
+  const lines = CROW_LINES[kind];
+  // Не повторяем подряд одну и ту же фразу
+  const choices = lines.length > 1 ? lines.filter((l) => l !== progress.crowLast) : lines;
+  const line = choices[Math.floor(Math.random() * choices.length)];
+  progress.crowLast = line;
+  saveProgress();
+  return line.replace("{n}", progress.streak);
+}
+
+function showCrow() {
+  $("crow-bird").innerHTML = crowSVG();
+  $("crow-text").textContent = crowLine();
+  $("crow").hidden = false;
 }
 
 function renderMap() {
@@ -218,18 +309,17 @@ function islands(items, unit) {
     b.textContent = state === "locked" ? "🔒" : step.control ? "🏆" : state === "done" ? (path.classes ? "✓" : `✓${step.number}`) :
                     path.classes ? "⭐" : step.number;
     if (!path.classes && state === "done") b.style.fontSize = "20px";
+    b.dataset.step = i;
     b.onclick = () => openPopover({ step: i });
     wrap.append(b);
-    if (state === "current") {
-      const tag = document.createElement("div");
-      tag.className = "start-tag";
-      tag.style.setProperty("--c", c);
-      tag.textContent = "НАЧАТЬ";
-      wrap.prepend(tag);
-    }
+    // Над текущим островком стоит енот, поэтому «Начать» пишем в подписи
     const label = document.createElement("div");
-    label.className = "island-label";
+    label.className = "island-label" + (state === "current" ? " current" : "");
     label.textContent = path.classes ? step.title : step.title.replace(/^Задание \d+\. /, "");
+    if (state === "current") {
+      label.style.setProperty("--c", c);
+      label.insertAdjacentHTML("afterbegin", "<b>НАЧАТЬ</b>");
+    }
     wrap.append(label);
     box.append(wrap);
   });
@@ -395,7 +485,8 @@ function pathResult(pct) {
   const passed = pct >= info.pass;
   const mode = progress.mode;
   if (lesson.kind === "skip") {
-    if (!passed) return { text: `Для зачёта раздела нужно ${info.pass}%. Лучше пройти его по шагам.`, next: null };
+    if (!passed) return { text: `Для зачёта раздела нужно ${info.pass}%. Лучше пройти его по шагам.`, next: null, failed: true };
+    progress.walkFrom = doneCount(); // енот на карте перейдёт отсюда на новый текущий островок
     progress.path[mode] = Math.max(doneCount(), unitEnd(lesson.unit));
     return { text: "⏭ Раздел зачтён!", next: progress.path[mode] < path.steps.length ? progress.path[mode] : null };
   }
@@ -403,10 +494,15 @@ function pathResult(pct) {
   if (!path.classes) {
     if (passed) progress.path[mode] = [...new Set([...(progress.path[mode] || []), step.number])].sort((a, b) => a - b);
     return { text: passed ? "✅ Номер отмечен как пройденный." : `Чтобы отметить номер, нужно ${info.pass}%.`,
-             next: passed ? null : lesson.index, again: !passed };
+             next: passed ? null : lesson.index, again: !passed, failed: !passed };
   }
-  if (!passed) return { text: `Для следующего шага нужно ${info.pass}%. Повтори карточку и попробуй ещё раз.`, next: lesson.index, again: true };
-  if (lesson.index === doneCount()) progress.path[mode] = lesson.index + 1;
+  if (!passed) {
+    return { text: `Для следующего шага нужно ${info.pass}%. Повтори карточку и попробуй ещё раз.`, next: lesson.index, again: true, failed: true };
+  }
+  if (lesson.index === doneCount()) {
+    progress.walkFrom = lesson.index;
+    progress.path[mode] = lesson.index + 1;
+  }
   const done = doneCount();
   if (done >= path.steps.length) return { text: "🎉 Весь путь пройден!", next: null };
   return { text: `🔓 Открыт шаг: ${path.steps[done].title}`, next: done };
@@ -430,7 +526,9 @@ function finish() {
   const result = ["step", "skip"].includes(lesson.kind) ? pathResult(pct) : null;
   saveProgress();
 
-  $("result-emoji").textContent = perfect ? "🏆" : pct >= 70 ? "🎉" : "💪";
+  // Енот радуется хорошему уроку и грустит, если шаг не засчитан или ответов мало
+  const mood = result?.failed || pct < 50 ? "sad" : perfect || pct >= 70 ? "happy" : "idle";
+  $("result-emoji").innerHTML = raccoonSVG(mood);
   $("result-title").textContent = perfect ? "Идеально! Ни одной ошибки!" : pct >= 70 ? "Урок пройден!" : "Урок пройден, есть над чем поработать";
   $("res-correct").textContent = `${lesson.correct}/${lesson.total}`;
   $("res-xp").textContent = `+${xp}`;
@@ -505,5 +603,6 @@ $("check").onclick = () => {
 $("answer").oninput = () => { $("check").disabled = !$("answer").value.trim(); };
 $("answer").onkeydown = (e) => { if (e.key === "Enter" && $("answer").value.trim()) $("check").click(); };
 $("next").onclick = nextQuestion;
+$("crow").onclick = () => { $("crow").hidden = true; };
 
 window.addEventListener("load", () => boot());
